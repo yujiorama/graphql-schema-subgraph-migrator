@@ -60,13 +60,12 @@ func (t *SchemaTransformer) transformSchema(doc *ast.SchemaDocument) *ast.Schema
                         Name: "import",
                         Value: &ast.Value{
                             Kind: ast.ListValue,
-                            // ChildValueList に変更
-                            List: []*ast.Value{
-                                {Raw: "@key", Kind: ast.StringValue},
-                                {Raw: "@external", Kind: ast.StringValue},
-                                {Raw: "@shareable", Kind: ast.StringValue},
-                                {Raw: "@provides", Kind: ast.StringValue},
-                                {Raw: "@requires", Kind: ast.StringValue},
+                            Children: ast.ChildValueList{
+                                &ast.ChildValue{Value: &ast.Value{Raw: "@key", Kind: ast.StringValue}},
+                                &ast.ChildValue{Value: &ast.Value{Raw: "@external", Kind: ast.StringValue}},
+                                &ast.ChildValue{Value: &ast.Value{Raw: "@shareable", Kind: ast.StringValue}},
+                                &ast.ChildValue{Value: &ast.Value{Raw: "@provides", Kind: ast.StringValue}},
+                                &ast.ChildValue{Value: &ast.Value{Raw: "@requires", Kind: ast.StringValue}},
                             },
                         },
                     },
@@ -74,7 +73,7 @@ func (t *SchemaTransformer) transformSchema(doc *ast.SchemaDocument) *ast.Schema
             },
         },
     }
-    
+
     // SchemaDefinitionList に変換
     doc.Schema = ast.SchemaDefinitionList{schemaExt}
 
