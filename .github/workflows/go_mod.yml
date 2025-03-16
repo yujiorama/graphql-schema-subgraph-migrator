@@ -24,10 +24,6 @@ jobs:
           go-version: '1.24'
           cache: true
 
-      - name: Get current date
-        id: date
-        run: echo "date=$(date -u +'%Y-%m-%d_%H:%M:%S')" >> $GITHUB_OUTPUT
-
       - name: Update go.sum
         run: |
           go mod tidy
@@ -42,26 +38,6 @@ jobs:
             echo "changes=false" >> $GITHUB_OUTPUT
           fi
 
-      - name: Create commit and push
-        if: steps.git-check.outputs.changes == 'true'
-        run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          
-          branch_name="update-go-mod-$(date -u +'%Y%m%d%H%M%S')"
-          git checkout -b "$branch_name"
-          
-          git commit -m "Update go.sum
-
-          Created by ${{ github.actor }} at ${{ steps.date.outputs.date }}
-
-          - Update Go dependencies to latest versions
-          - Run go mod tidy"
-          
-          git push origin "$branch_name"
-
-          echo "branch=$branch_name" >> $GITHUB_OUTPUT
-
       - name: Create Pull Request
         if: steps.git-check.outputs.changes == 'true'
         uses: peter-evans/create-pull-request@v6
@@ -74,7 +50,7 @@ jobs:
 
             - Update Go dependencies to latest versions
             - Run go mod tidy
-          branch: main
+          branch: update-go-sum
           delete-branch: true
           title: 'build: update Go dependencies'
           body: |
