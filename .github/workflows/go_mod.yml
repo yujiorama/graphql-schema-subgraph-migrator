@@ -1,9 +1,7 @@
-name: Update go.mod
+name: Update go.sum
 
 on:
   workflow_dispatch:
-  schedule:
-    - cron: '0 0 * * 1'  # 毎週月曜日の00:00 UTCに実行
 
 jobs:
   update:
@@ -30,17 +28,16 @@ jobs:
         id: date
         run: echo "date=$(date -u +'%Y-%m-%d_%H:%M:%S')" >> $GITHUB_OUTPUT
 
-      - name: Update go.mod
+      - name: Update go.sum
         run: |
-          rm -f go.mod go.sum
+          rm -f go.sum
           go mod init github.com/yujiorama/graphql-schema-subgraph-migrator
-          go get github.com/graphql-go/graphql@latest
           go mod tidy
 
       - name: Check for changes
         id: git-check
         run: |
-          git add go.mod go.sum
+          git add go.sum
           if ! git diff --cached --quiet; then
             echo "changes=true" >> $GITHUB_OUTPUT
           else
@@ -56,7 +53,7 @@ jobs:
           branch_name="update-go-mod-$(date -u +'%Y%m%d%H%M%S')"
           git checkout -b "$branch_name"
           
-          git commit -m "Update go.mod and go.sum
+          git commit -m "Update go.sum
 
           Created by ${{ github.actor }} at ${{ steps.date.outputs.date }}
 
@@ -73,27 +70,19 @@ jobs:
         with:
           token: ${{ steps.generate_token.outputs.token }}
           commit-message: |
-            Update go.mod and go.sum
+            Update go.sum
 
             Created by ${{ github.actor }} at ${{ steps.date.outputs.date }}
 
             - Update Go dependencies to latest versions
             - Run go mod tidy
-          branch: update-go-mod-${{ steps.date.outputs.date }}
+          branch: update-go-sum
           delete-branch: true
           title: 'build: update Go dependencies'
           body: |
             This PR updates the Go dependencies to their latest versions.
 
             Created by GitHub Actions at ${{ steps.date.outputs.date }} UTC.
-
-            <details>
-            <summary>Changes in go.mod</summary>
-
-            ```diff
-            $(git diff --no-color go.mod || echo "No changes in go.mod")
-            ```
-            </details>
 
             <details>
             <summary>Changes in go.sum</summary>
