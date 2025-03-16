@@ -30,8 +30,6 @@ jobs:
 
       - name: Update go.sum
         run: |
-          rm -f go.sum
-          go mod init github.com/yujiorama/graphql-schema-subgraph-migrator
           go mod tidy
 
       - name: Check for changes
