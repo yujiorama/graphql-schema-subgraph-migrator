@@ -18,6 +18,7 @@ func main() {
     var (
         configPath  = flag.String("config", "", "設定ファイルのパス")
         schemaPath  = flag.String("schema", "", "GraphQLスキーマファイルのパス")
+        outputPath  = flag.String("output", "", "出力ファイルパス（指定がない場合は標準出力）")
         showVersion = flag.Bool("version", false, "バージョン情報を表示")
     )
     flag.Parse()
@@ -39,8 +40,19 @@ func main() {
         os.Exit(1)
     }
 
-    if err := t.Transform(*schemaPath); err != nil {
+    result, err := t.TransformFile(*schemaPath)
+    if err != nil {
         fmt.Fprintln(os.Stderr, "エラー:", err)
         os.Exit(1)
+    }
+
+    // 出力先の処理
+    if *outputPath != "" {
+        if err := result.Save(*outputPath); err != nil {
+            fmt.Fprintln(os.Stderr, "出力エラー:", err)
+            os.Exit(1)
+        }
+    } else {
+        fmt.Println(result.String())
     }
 }
