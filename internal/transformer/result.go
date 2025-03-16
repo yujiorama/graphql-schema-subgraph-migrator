@@ -23,10 +23,8 @@ func (r *Result) String() string {
     var buf bytes.Buffer
     f := formatter.NewFormatter(
         &buf,
-        []formatter.FormatterOption{
-            formatter.WithComments(),
-            formatter.WithBuiltin(),
-        },
+        formatter.WithComments(),
+        formatter.WithBuiltin(),
     )
     f.FormatSchemaDocument(r.schema)
     return buf.String()
@@ -41,10 +39,8 @@ func (r *Result) Save(path string) error {
     var buf bytes.Buffer
     f := formatter.NewFormatter(
         &buf,
-        []formatter.FormatterOption{
-            formatter.WithComments(),
-            formatter.WithBuiltin(),
-        },
+        formatter.WithComments(),
+        formatter.WithBuiltin(),
     )
     f.FormatSchemaDocument(r.schema)
     return os.WriteFile(path, buf.Bytes(), 0644)
