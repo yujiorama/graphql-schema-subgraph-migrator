@@ -23,7 +23,7 @@ func (r *Result) String() string {
     var buf bytes.Buffer
     f := formatter.NewFormatter(
         &buf,
-        []formatter.FormatOption{
+        []formatter.FormatterOption{
             formatter.WithComments(),
             formatter.WithBuiltin(),
         },
@@ -41,7 +41,7 @@ func (r *Result) Save(path string) error {
     var buf bytes.Buffer
     f := formatter.NewFormatter(
         &buf,
-        []formatter.FormatOption{
+        []formatter.FormatterOption{
             formatter.WithComments(),
             formatter.WithBuiltin(),
         },
