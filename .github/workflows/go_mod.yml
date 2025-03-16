@@ -5,15 +5,20 @@ on:
   schedule:
     - cron: '0 0 * * 1'  # 毎週月曜日の00:00 UTCに実行
 
-permissions:
-  contents: write
-  pull-requests: write
-
 jobs:
   update:
     runs-on: ubuntu-latest
     steps:
+      - name: Generate token
+        id: generate_token
+        uses: tibdex/github-app-token@v2
+        with:
+          app_id: ${{ secrets.APP_ID }}
+          private_key: ${{ secrets.PRIVATE_KEY }}
+
       - uses: actions/checkout@v4
+        with:
+          token: ${{ steps.generate_token.outputs.token }}
 
       - name: Set up Go
         uses: actions/setup-go@v5
@@ -23,19 +28,50 @@ jobs:
 
       - name: Get current date
         id: date
-        run: echo "date=$(date -u +'%Y-%m-%d %H:%M:%S')" >> $GITHUB_OUTPUT
+        run: echo "date=$(date -u +'%Y-%m-%d_%H:%M:%S')" >> $GITHUB_OUTPUT
 
       - name: Update go.mod
         run: |
           rm -f go.mod go.sum
           go mod init github.com/yujiorama/graphql-schema-subgraph-migrator
-          go get github.com/99designs/gqlgen@latest
+          go get github.com/graphql-go/graphql@latest
           go mod tidy
 
+      - name: Check for changes
+        id: git-check
+        run: |
+          git add go.mod go.sum
+          if ! git diff --cached --quiet; then
+            echo "changes=true" >> $GITHUB_OUTPUT
+          else
+            echo "changes=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create commit and push
+        if: steps.git-check.outputs.changes == 'true'
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          
+          branch_name="update-go-mod-$(date -u +'%Y%m%d%H%M%S')"
+          git checkout -b "$branch_name"
+          
+          git commit -m "Update go.mod and go.sum
+
+          Created by ${{ github.actor }} at ${{ steps.date.outputs.date }}
+
+          - Update Go dependencies to latest versions
+          - Run go mod tidy"
+          
+          git push origin "$branch_name"
+
+          echo "branch=$branch_name" >> $GITHUB_OUTPUT
+
       - name: Create Pull Request
+        if: steps.git-check.outputs.changes == 'true'
         uses: peter-evans/create-pull-request@v6
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ steps.generate_token.outputs.token }}
           commit-message: |
             Update go.mod and go.sum
 
@@ -43,7 +79,7 @@ jobs:
 
             - Update Go dependencies to latest versions
             - Run go mod tidy
-          branch: update-go-mod
+          branch: update-go-mod-${{ steps.date.outputs.date }}
           delete-branch: true
           title: 'build: update Go dependencies'
           body: |
