@@ -4,7 +4,7 @@ import (
     "fmt"
     "os"
 
-    "github.com/vektah/gqlparser/v2"
+    "github.com/vektah/gqlparser/v2/formatter"
     "github.com/vektah/gqlparser/v2/ast"
 )
 
@@ -18,7 +18,7 @@ func (r *Result) String() string {
     if r.schema == nil {
         return ""
     }
-    return r.schema.String()
+    return formatter.Schema(r.schema)
 }
 
 // Save は変換後のスキーマを指定されたパスに保存する
@@ -26,5 +26,5 @@ func (r *Result) Save(path string) error {
     if r.schema == nil {
         return fmt.Errorf("schema is nil")
     }
-    return os.WriteFile(path, []byte(r.schema.String()), 0644)
+    return os.WriteFile(path, []byte(r.String()), 0644)
 }
