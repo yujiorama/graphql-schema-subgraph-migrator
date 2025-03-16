@@ -4,7 +4,6 @@ import (
     "fmt"
     "os"
 
-    "github.com/vektah/gqlparser/v2/formatter"
     "github.com/vektah/gqlparser/v2/ast"
 )
 
@@ -18,7 +17,7 @@ func (r *Result) String() string {
     if r.schema == nil {
         return ""
     }
-    return formatter.Schema(r.schema)
+    return r.schema.ToSchemaString()
 }
 
 // Save は変換後のスキーマを指定されたパスに保存する
