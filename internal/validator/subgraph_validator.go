@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/99designs/gqlgen/graphql/ast"
+	"github.com/vektah/gqlparser/v2/ast"
 )
 
 type SubgraphValidator struct {
