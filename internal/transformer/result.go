@@ -26,7 +26,7 @@ func (r *Result) String() string {
         []formatter.FormatOption{
             formatter.WithComments(),
             formatter.WithBuiltin(),
-        }
+        },
     )
     f.FormatSchemaDocument(r.schema)
     return buf.String()
@@ -44,7 +44,7 @@ func (r *Result) Save(path string) error {
         []formatter.FormatOption{
             formatter.WithComments(),
             formatter.WithBuiltin(),
-        }
+        },
     )
     f.FormatSchemaDocument(r.schema)
     return os.WriteFile(path, buf.Bytes(), 0644)
