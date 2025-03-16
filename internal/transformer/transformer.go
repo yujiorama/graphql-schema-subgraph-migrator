@@ -43,10 +43,14 @@ func (t *SchemaTransformer) TransformFile(schemaPath string) (*Result, error) {
     })
     if err != nil {
         return nil, fmt.Errorf("failed to parse schema: %w", err)
+    }    
+    // SchemaDocument に変換してから Transform を実行
+    schemaDoc := &ast.SchemaDocument{
+        Schema:      schema.Schema,
+        Definitions: schema.Definitions,
     }
-
     // 変換を実行
-    transformed, err := t.Transform(schema)
+    transformed, err := t.Transform(schemaDoc)
     if err != nil {
         return nil, err
     }
