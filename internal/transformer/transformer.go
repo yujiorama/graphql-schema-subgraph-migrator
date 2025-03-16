@@ -3,7 +3,7 @@ package transformer
 import (
 	"fmt"
 
-	"github.com/99designs/gqlgen/graphql/ast"
+	"github.com/vektah/gqlparser/v2/ast"
 	"github.com/yujiorama/graphql-schema-subgraph-migrator/internal/validator"
 )
 
