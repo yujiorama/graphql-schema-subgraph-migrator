@@ -74,7 +74,7 @@ jobs:
 
             - Update Go dependencies to latest versions
             - Run go mod tidy
-          branch: update-go-sum
+          branch: main
           delete-branch: true
           title: 'build: update Go dependencies'
           body: |
