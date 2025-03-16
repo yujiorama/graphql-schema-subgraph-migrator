@@ -2,7 +2,9 @@ package transformer
 
 import (
     "fmt"
+    "os"
 
+    "github.com/vektah/gqlparser/v2"
     "github.com/vektah/gqlparser/v2/ast"
     "github.com/yujiorama/graphql-schema-subgraph-migrator/internal/validator"
 )
@@ -26,6 +28,33 @@ func New(configPath string) (*SchemaTransformer, error) {
     }, nil
 }
 
+// TransformFile はファイルパスからスキーマを読み込んで変換する
+func (t *SchemaTransformer) TransformFile(schemaPath string) (*Result, error) {
+    // ファイルからスキーマを読み込む
+    source, err := os.ReadFile(schemaPath)
+    if err != nil {
+        return nil, fmt.Errorf("failed to read schema file: %w", err)
+    }
+
+    // スキーマをパースする
+    schema, err := gqlparser.LoadSchema(&ast.Source{
+        Name:  schemaPath,
+        Input: string(source),
+    })
+    if err != nil {
+        return nil, fmt.Errorf("failed to parse schema: %w", err)
+    }
+
+    // 変換を実行
+    transformed, err := t.Transform(schema)
+    if err != nil {
+        return nil, err
+    }
+
+    return &Result{schema: transformed}, nil
+}
+
+// Transform は ast.SchemaDocument を変換する（内部利用）
 func (t *SchemaTransformer) Transform(schema *ast.SchemaDocument) (*ast.SchemaDocument, error) {
     transformed := t.transformSchema(schema)
 
