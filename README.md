@@ -5,7 +5,7 @@ GraphQLスキーマをFederation Subgraphスキーマに変換するツール
 ## インストール
 
 ```bash
-go install github.com/yujiorama/graphql-schema-subgraph-migrator@latest
+go install github.com/yujiorama/graphql-schema-subgraph-migrator/cmd/graphql-schema-subgraph-migrator@latest
 ```
 
 ## 使用方法
