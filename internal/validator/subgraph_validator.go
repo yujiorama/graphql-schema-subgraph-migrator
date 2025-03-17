@@ -24,7 +24,8 @@ func (v *SubgraphValidator) Validate(schema *ast.SchemaDocument) []ValidationErr
 }
 
 func (v *SubgraphValidator) validateSchemaDefinition(schema *ast.SchemaDocument) {
-	if len(schema.Schema) == 0 {
+	extension := schema.SchemaExtension
+	if len(extension) == 0 {
 		v.addError(ValidationError{
 			Code:     "MISSING_SCHEMA_EXTENSION",
 			Message:  "Schema must be defined with 'extend schema'",
@@ -35,7 +36,7 @@ func (v *SubgraphValidator) validateSchemaDefinition(schema *ast.SchemaDocument)
 	}
 
 	hasLinkDirective := false
-	for _, schemaDefinition := range schema.Schema {
+	for _, schemaDefinition := range extension {
 		for _, dir := range schemaDefinition.Directives {
 			if dir.Name == "link" {
 				hasLinkDirective = true
