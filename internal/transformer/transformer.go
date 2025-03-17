@@ -3,6 +3,8 @@ package transformer
 import (
 	"fmt"
 	"os"
+	"sort"
+	"strings"
 
 	"github.com/vektah/gqlparser/v2/ast"
 	"github.com/vektah/gqlparser/v2/parser"
@@ -58,15 +60,49 @@ func (t *SchemaTransformer) Transform(schema *ast.SchemaDocument) (*ast.SchemaDo
 
 	// Validate transformed schema
 	if errors := t.validator.Validate(transformed); len(errors) > 0 {
-		return nil, fmt.Errorf("subgraph validation failed")
+		return nil, fmt.Errorf("subgraph validation failed:\n%s", formatValidationErrors(errors))
 	}
 
 	// Validate composition
 	if errors := t.compositionValidator.Validate(transformed); len(errors) > 0 {
-		return nil, fmt.Errorf("composition validation failed")
+		return nil, fmt.Errorf("composition validation failed:\n%s", formatValidationErrors(errors))
 	}
 
 	return transformed, nil
+}
+
+// ValidationError を Code ごとにグループ化し、Path を昇順に並び替えて文字列化するヘルパー関数
+func formatValidationErrors(errors []validator.ValidationError) string {
+	// エラーコードごとにグループ化用のマップを定義
+	groupedErrors := make(map[string][]validator.ValidationError)
+
+	// エラーをコードごとに分類
+	for _, err := range errors {
+		groupedErrors[err.Code] = append(groupedErrors[err.Code], err)
+	}
+
+	// 結果をフォーマットするためのスライス
+	var formattedGroups []string
+
+	// 各エラーコードごとに処理
+	for code, errs := range groupedErrors {
+		// Path の昇順で並び替え
+		sort.Slice(errs, func(i, j int) bool {
+			return strings.Join(errs[i].Path, ".") < strings.Join(errs[j].Path, ".")
+		})
+
+		// この Code グループのエラーをフォーマット
+		var formattedErrors []string
+		for _, err := range errs {
+			formattedErrors = append(formattedErrors, fmt.Sprintf("- %s (path: %s)", err.Message, strings.Join(err.Path, ".")))
+		}
+
+		// Code とそのエラー群を結合
+		formattedGroups = append(formattedGroups, fmt.Sprintf("[%s]\n%s", code, strings.Join(formattedErrors, "\n")))
+	}
+
+	// 最終結果を結合して返す
+	return strings.Join(formattedGroups, "\n\n")
 }
 
 func (t *SchemaTransformer) transformSchema(doc *ast.SchemaDocument) *ast.SchemaDocument {
