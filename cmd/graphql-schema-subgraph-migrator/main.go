@@ -36,20 +36,20 @@ func main() {
 
 	t, err := transformer.New(*configPath)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "エラー:", err)
+		fmt.Fprintf(os.Stderr, "エラー: %v\n", err)
 		os.Exit(1)
 	}
 
 	result, err := t.TransformFile(*schemaPath)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "エラー:", err)
+		fmt.Fprintf(os.Stderr, "エラー: %v\n", err)
 		os.Exit(1)
 	}
 
 	// 出力先の処理
 	if *outputPath != "" {
 		if err := result.Save(*outputPath); err != nil {
-			fmt.Fprintln(os.Stderr, "出力エラー:", err)
+			fmt.Fprintf(os.Stderr, "エラー: %v\n", err)
 			os.Exit(1)
 		}
 	} else {
