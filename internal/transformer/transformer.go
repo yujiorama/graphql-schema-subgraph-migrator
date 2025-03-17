@@ -151,9 +151,19 @@ func (t *SchemaTransformer) transformSchema(doc *ast.SchemaDocument) *ast.Schema
 }
 
 func (t *SchemaTransformer) transformTypeDefinition(def *ast.Definition) {
+	// `id` フィールドが存在しているか確認
+	hasIDField := false
+	for _, field := range def.Fields {
+		if field.Name == "id" {
+			hasIDField = true
+			break
+		}
+	}
+
+	// 型設定を取得
 	typeConfig, ok := t.config.Types[def.Name]
 	if !ok {
-		// Use default configuration if type-specific config is not found
+		// 型固有の設定が見つからない場合、デフォルト設定を使用
 		if t.config.Defaults != nil && t.config.Defaults.Key != nil {
 			typeConfig = TypeConfig{
 				Keys: []KeyConfig{*t.config.Defaults.Key},
@@ -161,7 +171,22 @@ func (t *SchemaTransformer) transformTypeDefinition(def *ast.Definition) {
 		}
 	}
 
-	// Add @key directives
+	// `id` フィールドが存在しない場合、`@key` を追加しない
+	if !hasIDField {
+		// External フィールドは引き続き処理
+		for _, field := range def.Fields {
+			for _, externalField := range typeConfig.External {
+				if field.Name == externalField {
+					field.Directives = append(field.Directives, &ast.Directive{
+						Name: "external",
+					})
+				}
+			}
+		}
+		return
+	}
+
+	// @key ディレクティブを追加
 	for _, key := range typeConfig.Keys {
 		keyDir := &ast.Directive{
 			Name: "key",
@@ -187,7 +212,7 @@ func (t *SchemaTransformer) transformTypeDefinition(def *ast.Definition) {
 		def.Directives = append(def.Directives, keyDir)
 	}
 
-	// Add @external directives to fields
+	// @external ディレクティブをフィールドに追加
 	for _, field := range def.Fields {
 		for _, externalField := range typeConfig.External {
 			if field.Name == externalField {
