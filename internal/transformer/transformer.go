@@ -138,7 +138,7 @@ func (t *SchemaTransformer) transformSchema(doc *ast.SchemaDocument) *ast.Schema
 	}
 
 	// SchemaDefinitionList に変換
-	doc.Schema = ast.SchemaDefinitionList{schemaExt}
+	doc.SchemaExtension = ast.SchemaDefinitionList{schemaExt}
 
 	// Transform type definitions - Types を Definitions に変更
 	for _, def := range doc.Definitions {
