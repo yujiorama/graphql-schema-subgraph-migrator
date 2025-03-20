@@ -1,0 +1,28 @@
+{
+    "types": {
+      "User": {
+        "keys": [
+          {
+            "fields": "id",
+            "resolvable": true
+          }
+        ],
+        "external": ["name"]
+      },
+      "Post": {
+        "keys": [
+          {
+            "fields": "id title",
+            "resolvable": true
+          }
+        ],
+        "external": ["author"]
+      }
+    },
+    "defaults": {
+      "key": {
+        "fields": "id",
+        "resolvable": true
+      }
+    }
+  }
