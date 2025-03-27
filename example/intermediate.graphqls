@@ -1,0 +1,24 @@
+type User {
+    id: ID
+    name: String
+    email: String
+}
+
+type Post {
+    id: ID
+    title: String
+    body: String
+    author: User
+}
+
+type Comment {
+    post: Post
+    author: User
+    body: String
+}
+
+type Query {
+    getUser(userId: ID): User
+}
+
+union _Entity = User | Post
