@@ -138,128 +138,206 @@ func (t *SchemaTransformer) transformSchema(doc *ast.SchemaDocument) *ast.Schema
 	}
 	doc.SchemaExtension = ast.SchemaDefinitionList{schemaExt}
 
+	// Transform type definitions
+	for _, def := range doc.Definitions {
+		if def.Kind == ast.Object {
+			t.transformTypeDefinition(def)
+		}
+	}
+
 	// Add required scalar types
-	doc.Definitions = append(doc.Definitions, &ast.Definition{
-		Kind: ast.Scalar,
-		Name: "_Any",
-	}, &ast.Definition{
-		Kind: ast.Scalar,
-		Name: "FieldSet",
-	}, &ast.Definition{
-		Kind: ast.Scalar,
-		Name: "link__Import",
-	}, &ast.Definition{
-		Kind: ast.Scalar,
-		Name: "federation__ContextFieldValue",
-	}, &ast.Definition{
-		Kind: ast.Scalar,
-		Name: "federation__Scope",
-	}, &ast.Definition{
-		Kind: ast.Scalar,
-		Name: "federation__Policy",
-	})
+	requiredScalarTypes := ast.DefinitionList{
+		&ast.Definition{
+			Kind: ast.Scalar,
+			Name: "_Any",
+		}, &ast.Definition{
+			Kind: ast.Scalar,
+			Name: "FieldSet",
+		}, &ast.Definition{
+			Kind: ast.Scalar,
+			Name: "link__Import",
+		}, &ast.Definition{
+			Kind: ast.Scalar,
+			Name: "federation__ContextFieldValue",
+		}, &ast.Definition{
+			Kind: ast.Scalar,
+			Name: "federation__Scope",
+		}, &ast.Definition{
+			Kind: ast.Scalar,
+			Name: "federation__Policy",
+		},
+	}
+	for _, requiredScalarTypeDefinition := range requiredScalarTypes {
+		scalarTypeExists := false
+		for _, definition := range doc.Definitions {
+			if definition.Kind == ast.Scalar && definition.Name == requiredScalarTypeDefinition.Name {
+				scalarTypeExists = true
+				break
+			}
+		}
+		if !scalarTypeExists {
+			doc.Definitions = append(doc.Definitions, requiredScalarTypeDefinition)
+		}
+	}
 
 	// Add required enum types
-	doc.Definitions = append(doc.Definitions, &ast.Definition{
-		Kind: ast.Enum,
-		Name: "link__Purpose",
-		EnumValues: ast.EnumValueList{
-			{Name: "SECURITY", Description: "SECURITY features provide metadata necessary to securely resolve fields."},
-			{Name: "EXECUTION", Description: "EXECUTION features provide metadata necessary for operation execution."},
+	requiredEnumTypes := ast.DefinitionList{
+		&ast.Definition{
+			Kind: ast.Enum,
+			Name: "link__Purpose",
+			EnumValues: ast.EnumValueList{
+				{Name: "SECURITY", Description: "SECURITY features provide metadata necessary to securely resolve fields."},
+				{Name: "EXECUTION", Description: "EXECUTION features provide metadata necessary for operation execution."},
+			},
 		},
-	})
+	}
+
+	for _, requiredEnumTypeDefinition := range requiredEnumTypes {
+		enumTypeExists := false
+		for _, definition := range doc.Definitions {
+			if definition.Kind == ast.Enum && definition.Name == requiredEnumTypeDefinition.Name {
+				enumTypeExists = true
+				break
+			}
+		}
+		if !enumTypeExists {
+			doc.Definitions = append(doc.Definitions, requiredEnumTypeDefinition)
+		}
+	}
 
 	// Add _Service type
-	doc.Definitions = append(doc.Definitions, &ast.Definition{
-		Kind: ast.Object,
-		Name: "_Service",
-		Fields: ast.FieldList{
-			{Name: "sdl", Type: ast.NonNullNamedType("String", nil)},
-		},
-	})
+	serviceTypeExists := false
+	for _, definition := range doc.Definitions {
+		if definition.Kind == ast.Object && definition.Name == "_Service" {
+			serviceTypeExists = true
+			break
+		}
+	}
+	if !serviceTypeExists {
+		doc.Definitions = append(doc.Definitions, &ast.Definition{
+			Kind: ast.Object,
+			Name: "_Service",
+			Fields: ast.FieldList{
+				{Name: "sdl", Type: ast.NonNullNamedType("String", nil)},
+			},
+		})
+	}
 
 	// Add Query extension
-	doc.Definitions = append(doc.Definitions, &ast.Definition{
-		Kind: ast.Object,
-		Name: "Query",
-		Fields: ast.FieldList{
-			&ast.FieldDefinition{
-				Name: "_entities",
-				Type: ast.NonNullListType(ast.NamedType("_Entity", nil), nil),
-				Arguments: ast.ArgumentDefinitionList{
-					&ast.ArgumentDefinition{
-						Name: "representations",
-						Type: ast.NonNullListType(ast.NonNullNamedType("_Any", nil), nil),
+	for _, definition := range doc.Definitions {
+		if definition.Kind == ast.Object && definition.Name == "Query" {
+			queryEntitiesFieldExists := false
+			queryServiceFieldExists := false
+
+			for _, field := range definition.Fields {
+				if field.Name == "_entities" {
+					queryEntitiesFieldExists = true
+				}
+				if field.Name == "_service" {
+					queryServiceFieldExists = true
+				}
+			}
+
+			if !queryEntitiesFieldExists {
+				definition.Fields = append(definition.Fields, &ast.FieldDefinition{
+					Name: "_entities",
+					Type: ast.NonNullListType(ast.NamedType("_Entity", nil), nil),
+					Arguments: ast.ArgumentDefinitionList{
+						&ast.ArgumentDefinition{
+							Name: "representations",
+							Type: ast.NonNullListType(ast.NonNullNamedType("_Any", nil), nil),
+						},
 					},
-				},
-			},
-			&ast.FieldDefinition{
-				Name: "_service",
-				Type: ast.NonNullNamedType("_Service", nil),
-			},
-		},
-	},
-	)
+				})
+			}
+			if !queryServiceFieldExists {
+				definition.Fields = append(definition.Fields, &ast.FieldDefinition{
+					Name: "_service",
+					Type: ast.NonNullNamedType("_Service", nil),
+				})
+			}
+			break
+		}
+	}
 
 	// Add directives
-	doc.Directives = append(doc.Directives, &ast.DirectiveDefinition{
-		Name: "external",
-		Locations: []ast.DirectiveLocation{
-			ast.LocationFieldDefinition,
-			ast.LocationObject,
+	requiredDirectives := ast.DirectiveDefinitionList{
+		&ast.DirectiveDefinition{
+			Name: "external",
+			Locations: []ast.DirectiveLocation{
+				ast.LocationFieldDefinition,
+				ast.LocationObject,
+			},
+		}, &ast.DirectiveDefinition{
+			Name: "requires",
+			Arguments: ast.ArgumentDefinitionList{
+				{Name: "fields", Type: ast.NonNullNamedType("FieldSet", nil)},
+			},
+			Locations: []ast.DirectiveLocation{
+				ast.LocationFieldDefinition,
+			},
+		}, &ast.DirectiveDefinition{
+			Name: "provides",
+			Arguments: ast.ArgumentDefinitionList{
+				{Name: "fields", Type: ast.NonNullNamedType("FieldSet", nil)},
+			},
+			Locations: []ast.DirectiveLocation{
+				ast.LocationFieldDefinition,
+			},
+		}, &ast.DirectiveDefinition{
+			Name: "key",
+			Arguments: ast.ArgumentDefinitionList{
+				{Name: "fields", Type: ast.NonNullNamedType("FieldSet", nil)},
+				{Name: "resolvable", Type: ast.NamedType("Boolean", nil)},
+			},
+			Locations: []ast.DirectiveLocation{
+				ast.LocationObject,
+				ast.LocationInterface,
+			},
+			IsRepeatable: true,
+		}, &ast.DirectiveDefinition{
+			Name: "link",
+			Arguments: ast.ArgumentDefinitionList{
+				{Name: "url", Type: ast.NonNullNamedType("String", nil)},
+				{Name: "as", Type: ast.NamedType("String", nil)},
+				{Name: "for", Type: ast.NamedType("link__Purpose", nil)},
+				{Name: "import", Type: ast.ListType(ast.NamedType("link__Import", nil), nil)},
+			},
+			Locations: []ast.DirectiveLocation{
+				ast.LocationSchema,
+			},
+			IsRepeatable: true,
+		}, &ast.DirectiveDefinition{
+			Name: "shareable",
+			Locations: []ast.DirectiveLocation{
+				ast.LocationObject,
+				ast.LocationFieldDefinition,
+			},
 		},
-	}, &ast.DirectiveDefinition{
-		Name: "requires",
-		Arguments: ast.ArgumentDefinitionList{
-			{Name: "fields", Type: ast.NonNullNamedType("FieldSet", nil)},
-		},
-		Locations: []ast.DirectiveLocation{
-			ast.LocationFieldDefinition,
-		},
-	}, &ast.DirectiveDefinition{
-		Name: "provides",
-		Arguments: ast.ArgumentDefinitionList{
-			{Name: "fields", Type: ast.NonNullNamedType("FieldSet", nil)},
-		},
-		Locations: []ast.DirectiveLocation{
-			ast.LocationFieldDefinition,
-		},
-	}, &ast.DirectiveDefinition{
-		Name: "key",
-		Arguments: ast.ArgumentDefinitionList{
-			{Name: "fields", Type: ast.NonNullNamedType("FieldSet", nil)},
-			{Name: "resolvable", Type: ast.NamedType("Boolean", nil)},
-		},
-		Locations: []ast.DirectiveLocation{
-			ast.LocationObject,
-			ast.LocationInterface,
-		},
-		IsRepeatable: true,
-	}, &ast.DirectiveDefinition{
-		Name: "link",
-		Arguments: ast.ArgumentDefinitionList{
-			{Name: "url", Type: ast.NonNullNamedType("String", nil)},
-			{Name: "as", Type: ast.NamedType("String", nil)},
-			{Name: "for", Type: ast.NamedType("link__Purpose", nil)},
-			{Name: "import", Type: ast.ListType(ast.NamedType("link__Import", nil), nil)},
-		},
-		Locations: []ast.DirectiveLocation{
-			ast.LocationSchema,
-		},
-		IsRepeatable: true,
-	}, &ast.DirectiveDefinition{
-		Name: "shareable",
-		Locations: []ast.DirectiveLocation{
-			ast.LocationObject,
-			ast.LocationFieldDefinition,
-		},
-	})
+	}
+
+	for _, requiredDirective := range requiredDirectives {
+		undefinedDirectiveDefinitions := ast.DirectiveDefinitionList{}
+		for _, directive := range doc.Directives {
+			if requiredDirective.Name == directive.Name {
+				break
+			}
+			undefinedDirectiveDefinitions = append(undefinedDirectiveDefinitions, requiredDirective)
+		}
+		if len(undefinedDirectiveDefinitions) > 0 {
+			doc.Directives = append(doc.Directives, undefinedDirectiveDefinitions...)
+		}
+	}
 
 	// Add _Entity union type
 	entityTypes := []string{}
-	for _, def := range doc.Definitions {
-		if def.Kind == ast.Object {
-			entityTypes = append(entityTypes, def.Name)
+	for _, definition := range doc.Definitions {
+		if definition.Kind == ast.Object {
+			for _, directive := range definition.Directives {
+				if directive.Name == "key" {
+					entityTypes = append(entityTypes, definition.Name)
+				}
+			}
 		}
 	}
 	doc.Definitions = append(doc.Definitions, &ast.Definition{
@@ -267,13 +345,6 @@ func (t *SchemaTransformer) transformSchema(doc *ast.SchemaDocument) *ast.Schema
 		Name:  "_Entity",
 		Types: entityTypes,
 	})
-
-	// Transform type definitions
-	for _, def := range doc.Definitions {
-		if def.Kind == ast.Object {
-			t.transformTypeDefinition(def)
-		}
-	}
 
 	return doc
 }
