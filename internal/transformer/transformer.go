@@ -224,22 +224,49 @@ func (t *SchemaTransformer) transformSchema(doc *ast.SchemaDocument) *ast.Schema
 	}
 
 	// Add Query extension
+	var queryTypeDefinition *ast.Definition
 	for _, definition := range doc.Definitions {
 		if definition.Kind == ast.Object && definition.Name == "Query" {
-			queryEntitiesFieldExists := false
-			queryServiceFieldExists := false
-
-			for _, field := range definition.Fields {
-				if field.Name == "_entities" {
-					queryEntitiesFieldExists = true
-				}
-				if field.Name == "_service" {
-					queryServiceFieldExists = true
-				}
+			queryTypeDefinition = definition
+			break
+		}
+	}
+	if queryTypeDefinition != nil {
+		entityFieldExists := false
+		serviceFieldExists := false
+		for _, field := range queryTypeDefinition.Fields {
+			if field.Name == "_entities" {
+				entityFieldExists = true
 			}
+			if field.Name == "_service" {
+				serviceFieldExists = true
+			}
+		}
 
-			if !queryEntitiesFieldExists {
-				definition.Fields = append(definition.Fields, &ast.FieldDefinition{
+		if !entityFieldExists {
+			queryTypeDefinition.Fields = append(queryTypeDefinition.Fields, &ast.FieldDefinition{
+				Name: "_entities",
+				Type: ast.NonNullListType(ast.NamedType("_Entity", nil), nil),
+				Arguments: ast.ArgumentDefinitionList{
+					&ast.ArgumentDefinition{
+						Name: "representations",
+						Type: ast.NonNullListType(ast.NonNullNamedType("_Any", nil), nil),
+					},
+				},
+			})
+		}
+		if !serviceFieldExists {
+			queryTypeDefinition.Fields = append(queryTypeDefinition.Fields, &ast.FieldDefinition{
+				Name: "_service",
+				Type: ast.NonNullNamedType("_Service", nil),
+			})
+		}
+	} else {
+		doc.Definitions = append(doc.Definitions, &ast.Definition{
+			Kind: ast.Object,
+			Name: "Query",
+			Fields: ast.FieldList{
+				&ast.FieldDefinition{
 					Name: "_entities",
 					Type: ast.NonNullListType(ast.NamedType("_Entity", nil), nil),
 					Arguments: ast.ArgumentDefinitionList{
@@ -248,16 +275,14 @@ func (t *SchemaTransformer) transformSchema(doc *ast.SchemaDocument) *ast.Schema
 							Type: ast.NonNullListType(ast.NonNullNamedType("_Any", nil), nil),
 						},
 					},
-				})
-			}
-			if !queryServiceFieldExists {
-				definition.Fields = append(definition.Fields, &ast.FieldDefinition{
+				},
+				&ast.FieldDefinition{
 					Name: "_service",
 					Type: ast.NonNullNamedType("_Service", nil),
-				})
-			}
-			break
-		}
+				},
+			},
+		},
+		)
 	}
 
 	// Add directives
