@@ -136,11 +136,139 @@ func (t *SchemaTransformer) transformSchema(doc *ast.SchemaDocument) *ast.Schema
 			},
 		},
 	}
-
-	// SchemaDefinitionList に変換
 	doc.SchemaExtension = ast.SchemaDefinitionList{schemaExt}
 
-	// Transform type definitions - Types を Definitions に変更
+	// Add required scalar types
+	doc.Definitions = append(doc.Definitions, &ast.Definition{
+		Kind: ast.Scalar,
+		Name: "_Any",
+	}, &ast.Definition{
+		Kind: ast.Scalar,
+		Name: "FieldSet",
+	}, &ast.Definition{
+		Kind: ast.Scalar,
+		Name: "link__Import",
+	}, &ast.Definition{
+		Kind: ast.Scalar,
+		Name: "federation__ContextFieldValue",
+	}, &ast.Definition{
+		Kind: ast.Scalar,
+		Name: "federation__Scope",
+	}, &ast.Definition{
+		Kind: ast.Scalar,
+		Name: "federation__Policy",
+	})
+
+	// Add required enum types
+	doc.Definitions = append(doc.Definitions, &ast.Definition{
+		Kind: ast.Enum,
+		Name: "link__Purpose",
+		EnumValues: ast.EnumValueList{
+			{Name: "SECURITY", Description: "SECURITY features provide metadata necessary to securely resolve fields."},
+			{Name: "EXECUTION", Description: "EXECUTION features provide metadata necessary for operation execution."},
+		},
+	})
+
+	// Add _Service type
+	doc.Definitions = append(doc.Definitions, &ast.Definition{
+		Kind: ast.Object,
+		Name: "_Service",
+		Fields: ast.FieldList{
+			{Name: "sdl", Type: ast.NonNullNamedType("String", nil)},
+		},
+	})
+
+	// Add Query extension
+	doc.Definitions = append(doc.Definitions, &ast.Definition{
+		Kind: ast.Object,
+		Name: "Query",
+		Fields: ast.FieldList{
+			&ast.FieldDefinition{
+				Name: "_entities",
+				Type: ast.NonNullListType(ast.NamedType("_Entity", nil), nil),
+				Arguments: ast.ArgumentDefinitionList{
+					&ast.ArgumentDefinition{
+						Name: "representations",
+						Type: ast.NonNullListType(ast.NonNullNamedType("_Any", nil), nil),
+					},
+				},
+			},
+			&ast.FieldDefinition{
+				Name: "_service",
+				Type: ast.NonNullNamedType("_Service", nil),
+			},
+		},
+	},
+	)
+
+	// Add directives
+	doc.Directives = append(doc.Directives, &ast.DirectiveDefinition{
+		Name: "external",
+		Locations: []ast.DirectiveLocation{
+			ast.LocationFieldDefinition,
+			ast.LocationObject,
+		},
+	}, &ast.DirectiveDefinition{
+		Name: "requires",
+		Arguments: ast.ArgumentDefinitionList{
+			{Name: "fields", Type: ast.NonNullNamedType("FieldSet", nil)},
+		},
+		Locations: []ast.DirectiveLocation{
+			ast.LocationFieldDefinition,
+		},
+	}, &ast.DirectiveDefinition{
+		Name: "provides",
+		Arguments: ast.ArgumentDefinitionList{
+			{Name: "fields", Type: ast.NonNullNamedType("FieldSet", nil)},
+		},
+		Locations: []ast.DirectiveLocation{
+			ast.LocationFieldDefinition,
+		},
+	}, &ast.DirectiveDefinition{
+		Name: "key",
+		Arguments: ast.ArgumentDefinitionList{
+			{Name: "fields", Type: ast.NonNullNamedType("FieldSet", nil)},
+			{Name: "resolvable", Type: ast.NamedType("Boolean", nil)},
+		},
+		Locations: []ast.DirectiveLocation{
+			ast.LocationObject,
+			ast.LocationInterface,
+		},
+		IsRepeatable: true,
+	}, &ast.DirectiveDefinition{
+		Name: "link",
+		Arguments: ast.ArgumentDefinitionList{
+			{Name: "url", Type: ast.NonNullNamedType("String", nil)},
+			{Name: "as", Type: ast.NamedType("String", nil)},
+			{Name: "for", Type: ast.NamedType("link__Purpose", nil)},
+			{Name: "import", Type: ast.ListType(ast.NamedType("link__Import", nil), nil)},
+		},
+		Locations: []ast.DirectiveLocation{
+			ast.LocationSchema,
+		},
+		IsRepeatable: true,
+	}, &ast.DirectiveDefinition{
+		Name: "shareable",
+		Locations: []ast.DirectiveLocation{
+			ast.LocationObject,
+			ast.LocationFieldDefinition,
+		},
+	})
+
+	// Add _Entity union type
+	entityTypes := []string{}
+	for _, def := range doc.Definitions {
+		if def.Kind == ast.Object {
+			entityTypes = append(entityTypes, def.Name)
+		}
+	}
+	doc.Definitions = append(doc.Definitions, &ast.Definition{
+		Kind:  ast.Union,
+		Name:  "_Entity",
+		Types: entityTypes,
+	})
+
+	// Transform type definitions
 	for _, def := range doc.Definitions {
 		if def.Kind == ast.Object {
 			t.transformTypeDefinition(def)
