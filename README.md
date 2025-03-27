@@ -35,18 +35,18 @@ graphql-schema-subgraph-migrator version dev (none) built at unknown
 ### example
 
 ```bash
-$ graphql-schema-subgraph-migrator -config example/config.json -schema example/example.graphqls
+$ graphql-schema-subgraph-migrator -config example/config.json -schema example/example.graphqls 
 extend schema @link(url: "https://specs.apollo.dev/federation/v2.3", import: ["@key","@external","@shareable","@provides","@requires"])
 type User @key(fields: "id", resolvable: true) {
         id: ID
-        name: String
+        name: String @external
         email: String
 }
-type Post @key(fields: "id", resolvable: true) {
+type Post @key(fields: "id title", resolvable: true) {
         id: ID
         title: String
         body: String
-        author: User
+        author: User @external
 }
 scalar _Any
 scalar FieldSet
