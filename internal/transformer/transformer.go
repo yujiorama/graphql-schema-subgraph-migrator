@@ -115,7 +115,7 @@ func (t *SchemaTransformer) transformSchema(doc *ast.SchemaDocument) *ast.Schema
 					{
 						Name: "url",
 						Value: &ast.Value{
-							Raw:  "https://specs.apollo.dev/federation/v2.3",
+							Raw:  "https://specs.apollo.dev/federation/v2.9",
 							Kind: ast.StringValue,
 						},
 					},
@@ -152,7 +152,7 @@ func (t *SchemaTransformer) transformSchema(doc *ast.SchemaDocument) *ast.Schema
 			Name: "_Any",
 		}, &ast.Definition{
 			Kind: ast.Scalar,
-			Name: "FieldSet",
+			Name: "federation__FieldSet",
 		}, &ast.Definition{
 			Kind: ast.Scalar,
 			Name: "link__Import",
