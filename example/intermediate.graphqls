@@ -4,7 +4,7 @@ type User {
     email: String
 }
 
-type Post {
+type Post @key(fields: "id title", resolvable: true) {
     id: ID
     title: String
     body: String
@@ -21,4 +21,4 @@ type Query {
     getUser(userId: ID): User
 }
 
-union _Entity = User | Post
+union _Entity = Post
