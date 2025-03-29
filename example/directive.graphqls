@@ -1,0 +1,1 @@
+directive @custom on FIELD_DEFINITION
