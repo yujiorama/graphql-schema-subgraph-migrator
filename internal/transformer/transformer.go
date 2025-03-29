@@ -3,6 +3,7 @@ package transformer
 import (
 	"fmt"
 	"os"
+	"regexp"
 	"sort"
 	"strings"
 
@@ -180,31 +181,6 @@ func (t *SchemaTransformer) transformSchema(doc *ast.SchemaDocument) *ast.Schema
 		}
 	}
 
-	// Add required enum types
-	requiredEnumTypes := ast.DefinitionList{
-		&ast.Definition{
-			Kind: ast.Enum,
-			Name: "link__Purpose",
-			EnumValues: ast.EnumValueList{
-				{Name: "SECURITY", Description: "SECURITY features provide metadata necessary to securely resolve fields."},
-				{Name: "EXECUTION", Description: "EXECUTION features provide metadata necessary for operation execution."},
-			},
-		},
-	}
-
-	for _, requiredEnumTypeDefinition := range requiredEnumTypes {
-		enumTypeExists := false
-		for _, definition := range doc.Definitions {
-			if definition.Kind == ast.Enum && definition.Name == requiredEnumTypeDefinition.Name {
-				enumTypeExists = true
-				break
-			}
-		}
-		if !enumTypeExists {
-			doc.Definitions = append(doc.Definitions, requiredEnumTypeDefinition)
-		}
-	}
-
 	// Add _Service type
 	serviceTypeExists := false
 	for _, definition := range doc.Definitions {
@@ -285,92 +261,37 @@ func (t *SchemaTransformer) transformSchema(doc *ast.SchemaDocument) *ast.Schema
 		)
 	}
 
-	// Add directives
-	requiredDirectives := ast.DirectiveDefinitionList{
-		&ast.DirectiveDefinition{
-			Name: "external",
-			Locations: []ast.DirectiveLocation{
-				ast.LocationFieldDefinition,
-				ast.LocationObject,
-			},
-		}, &ast.DirectiveDefinition{
-			Name: "requires",
-			Arguments: ast.ArgumentDefinitionList{
-				{Name: "fields", Type: ast.NonNullNamedType("federation__FieldSet", nil)},
-			},
-			Locations: []ast.DirectiveLocation{
-				ast.LocationFieldDefinition,
-			},
-		}, &ast.DirectiveDefinition{
-			Name: "provides",
-			Arguments: ast.ArgumentDefinitionList{
-				{Name: "fields", Type: ast.NonNullNamedType("federation__FieldSet", nil)},
-			},
-			Locations: []ast.DirectiveLocation{
-				ast.LocationFieldDefinition,
-			},
-		}, &ast.DirectiveDefinition{
-			Name: "key",
-			Arguments: ast.ArgumentDefinitionList{
-				{Name: "fields", Type: ast.NonNullNamedType("federation__FieldSet", nil)},
-				{Name: "resolvable", Type: ast.NamedType("Boolean", nil)},
-			},
-			Locations: []ast.DirectiveLocation{
-				ast.LocationObject,
-				ast.LocationInterface,
-			},
-			IsRepeatable: true,
-		}, &ast.DirectiveDefinition{
-			Name: "link",
-			Arguments: ast.ArgumentDefinitionList{
-				{Name: "url", Type: ast.NonNullNamedType("String", nil)},
-				{Name: "as", Type: ast.NamedType("String", nil)},
-				{Name: "for", Type: ast.NamedType("link__Purpose", nil)},
-				{Name: "import", Type: ast.ListType(ast.NamedType("link__Import", nil), nil)},
-			},
-			Locations: []ast.DirectiveLocation{
-				ast.LocationSchema,
-			},
-			IsRepeatable: true,
-		}, &ast.DirectiveDefinition{
-			Name: "shareable",
-			Locations: []ast.DirectiveLocation{
-				ast.LocationObject,
-				ast.LocationFieldDefinition,
-			},
-		},
-	}
-
-	for _, requiredDirective := range requiredDirectives {
-		requiredDirectiveExists := false
-		for _, directive := range doc.Directives {
-			if requiredDirective.Name == directive.Name {
-				requiredDirectiveExists = true
-				break
-			}
-		}
-		if !requiredDirectiveExists {
-			doc.Directives = append(doc.Directives, requiredDirective)
-		}
-	}
-
 	// Add _Entity union type
-	entityTypes := []string{}
-	for _, definition := range doc.Definitions {
-		if definition.Kind == ast.Object {
-			for _, directive := range definition.Directives {
-				if directive.Name == "key" {
-					entityTypes = append(entityTypes, definition.Name)
+	entityTypes := map[string]bool{}
+	for _, typeDefinition := range doc.Definitions {
+		if typeDefinition.Kind == ast.Object {
+			for _, directive := range typeDefinition.Directives {
+				if strings.EqualFold(directive.Name, "key") {
+					entityTypes[typeDefinition.Name] = true
+					for _, argument := range directive.Arguments {
+						if strings.EqualFold(argument.Name, "resolvable") {
+							if strings.EqualFold(argument.Value.Raw, "false") {
+								entityTypes[typeDefinition.Name] = false
+							}
+						}
+					}
 				}
 			}
 		}
 	}
 
-	if len(entityTypes) > 0 {
+	resolvableEntityTypes := []string{}
+	for entityType, isResolvable := range entityTypes {
+		if isResolvable {
+			resolvableEntityTypes = append(resolvableEntityTypes, entityType)
+		}
+	}
+
+	if len(resolvableEntityTypes) > 0 {
 		doc.Definitions = append(doc.Definitions, &ast.Definition{
 			Kind:  ast.Union,
 			Name:  "_Entity",
-			Types: entityTypes,
+			Types: resolvableEntityTypes,
 		})
 	}
 
@@ -378,15 +299,6 @@ func (t *SchemaTransformer) transformSchema(doc *ast.SchemaDocument) *ast.Schema
 }
 
 func (t *SchemaTransformer) transformTypeDefinition(def *ast.Definition) {
-	// `id` フィールドが存在しているか確認
-	hasIDField := false
-	for _, field := range def.Fields {
-		if field.Name == "id" {
-			hasIDField = true
-			break
-		}
-	}
-
 	// 型設定を取得
 	typeConfig, ok := t.config.Types[def.Name]
 	if !ok {
@@ -398,45 +310,44 @@ func (t *SchemaTransformer) transformTypeDefinition(def *ast.Definition) {
 		}
 	}
 
-	// `id` フィールドが存在しない場合、`@key` を追加しない
-	if !hasIDField {
-		// External フィールドは引き続き処理
-		for _, field := range def.Fields {
-			for _, externalField := range typeConfig.External {
-				if field.Name == externalField {
-					field.Directives = append(field.Directives, &ast.Directive{
-						Name: "external",
-					})
+	for _, key := range typeConfig.Keys {
+		// TODO https://www.apollographql.com/docs/graphos/schema-design/federated-schemas/reference/directives#key
+		keyFields := regexp.MustCompile(`\s+`).Split(key.Fields, -1)
+		keyFieldsExistsCount := 0
+		for _, keyFieldName := range keyFields {
+			for _, definedField := range def.Fields {
+				if definedField.Name == keyFieldName {
+					keyFieldsExistsCount++
+					break
 				}
 			}
 		}
-		return
-	}
 
-	// @key ディレクティブを追加
-	for _, key := range typeConfig.Keys {
-		keyDir := &ast.Directive{
-			Name: "key",
-			Arguments: ast.ArgumentList{
-				{
-					Name: "fields",
-					Value: &ast.Value{
-						Raw:  key.Fields,
-						Kind: ast.StringValue,
+		if keyFieldsExistsCount == len(keyFields) {
+			// fieldsに指定したフィールドが存在するので `@key` ディレクティブを追加
+			keyDirective := &ast.Directive{
+				Name: "key",
+				Arguments: ast.ArgumentList{
+					{
+						Name: "fields",
+						Value: &ast.Value{
+							Raw:  key.Fields,
+							Kind: ast.StringValue,
+						},
 					},
 				},
-			},
+			}
+			if key.Resolvable != nil {
+				keyDirective.Arguments = append(keyDirective.Arguments, &ast.Argument{
+					Name: "resolvable",
+					Value: &ast.Value{
+						Raw:  fmt.Sprintf("%t", *key.Resolvable),
+						Kind: ast.BooleanValue,
+					},
+				})
+			}
+			def.Directives = append(def.Directives, keyDirective)
 		}
-		if key.Resolvable != nil {
-			keyDir.Arguments = append(keyDir.Arguments, &ast.Argument{
-				Name: "resolvable",
-				Value: &ast.Value{
-					Raw:  fmt.Sprintf("%t", *key.Resolvable),
-					Kind: ast.BooleanValue,
-				},
-			})
-		}
-		def.Directives = append(def.Directives, keyDir)
 	}
 
 	// @external ディレクティブをフィールドに追加
