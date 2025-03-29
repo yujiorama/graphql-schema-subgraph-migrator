@@ -1,28 +1,40 @@
 {
-    "types": {
-      "User": {
-        "keys": [
-          {
-            "fields": "id",
-            "resolvable": true
-          }
-        ],
-        "external": ["name"]
-      },
-      "Post": {
-        "keys": [
-          {
-            "fields": "id title",
-            "resolvable": true
-          }
-        ],
-        "external": ["author"]
-      }
+  "types": {
+    "User": {
+      "keys": [
+        {
+          "fields": "id",
+          "resolvable": true
+        }
+      ],
+      "external": [
+        "name"
+      ]
     },
-    "defaults": {
-      "key": {
-        "fields": "id",
-        "resolvable": true
-      }
+    "Post": {
+      "keys": [
+        {
+          "fields": "id title",
+          "resolvable": true
+        }
+      ],
+      "external": [
+        "author"
+      ]
+    },
+    "Comment": {
+      "keys": [
+        {
+          "fields": "id",
+          "resolvable": false
+        }
+      ]
+    }
+  },
+  "defaults": {
+    "key": {
+      "fields": "id",
+      "resolvable": true
     }
   }
+}
