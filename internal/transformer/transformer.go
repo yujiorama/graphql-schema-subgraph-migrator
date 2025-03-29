@@ -232,18 +232,18 @@ func (t *SchemaTransformer) transformSchema(doc *ast.SchemaDocument) *ast.Schema
 		}
 	}
 	if queryTypeDefinition != nil {
-		entityFieldExists := false
+		entitiesFieldExists := false
 		serviceFieldExists := false
 		for _, field := range queryTypeDefinition.Fields {
 			if field.Name == "_entities" {
-				entityFieldExists = true
+				entitiesFieldExists = true
 			}
 			if field.Name == "_service" {
 				serviceFieldExists = true
 			}
 		}
 
-		if !entityFieldExists {
+		if !entitiesFieldExists {
 			queryTypeDefinition.Fields = append(queryTypeDefinition.Fields, &ast.FieldDefinition{
 				Name: "_entities",
 				Type: ast.NonNullListType(ast.NamedType("_Entity", nil), nil),
@@ -296,7 +296,7 @@ func (t *SchemaTransformer) transformSchema(doc *ast.SchemaDocument) *ast.Schema
 		}, &ast.DirectiveDefinition{
 			Name: "requires",
 			Arguments: ast.ArgumentDefinitionList{
-				{Name: "fields", Type: ast.NonNullNamedType("FieldSet", nil)},
+				{Name: "fields", Type: ast.NonNullNamedType("federation__FieldSet", nil)},
 			},
 			Locations: []ast.DirectiveLocation{
 				ast.LocationFieldDefinition,
@@ -304,7 +304,7 @@ func (t *SchemaTransformer) transformSchema(doc *ast.SchemaDocument) *ast.Schema
 		}, &ast.DirectiveDefinition{
 			Name: "provides",
 			Arguments: ast.ArgumentDefinitionList{
-				{Name: "fields", Type: ast.NonNullNamedType("FieldSet", nil)},
+				{Name: "fields", Type: ast.NonNullNamedType("federation__FieldSet", nil)},
 			},
 			Locations: []ast.DirectiveLocation{
 				ast.LocationFieldDefinition,
@@ -312,7 +312,7 @@ func (t *SchemaTransformer) transformSchema(doc *ast.SchemaDocument) *ast.Schema
 		}, &ast.DirectiveDefinition{
 			Name: "key",
 			Arguments: ast.ArgumentDefinitionList{
-				{Name: "fields", Type: ast.NonNullNamedType("FieldSet", nil)},
+				{Name: "fields", Type: ast.NonNullNamedType("federation__FieldSet", nil)},
 				{Name: "resolvable", Type: ast.NamedType("Boolean", nil)},
 			},
 			Locations: []ast.DirectiveLocation{
@@ -342,15 +342,15 @@ func (t *SchemaTransformer) transformSchema(doc *ast.SchemaDocument) *ast.Schema
 	}
 
 	for _, requiredDirective := range requiredDirectives {
-		undefinedDirectiveDefinitions := ast.DirectiveDefinitionList{}
+		requiredDirectiveExists := false
 		for _, directive := range doc.Directives {
 			if requiredDirective.Name == directive.Name {
+				requiredDirectiveExists = true
 				break
 			}
-			undefinedDirectiveDefinitions = append(undefinedDirectiveDefinitions, requiredDirective)
 		}
-		if len(undefinedDirectiveDefinitions) > 0 {
-			doc.Directives = append(doc.Directives, undefinedDirectiveDefinitions...)
+		if !requiredDirectiveExists {
+			doc.Directives = append(doc.Directives, requiredDirective)
 		}
 	}
 
@@ -365,11 +365,14 @@ func (t *SchemaTransformer) transformSchema(doc *ast.SchemaDocument) *ast.Schema
 			}
 		}
 	}
-	doc.Definitions = append(doc.Definitions, &ast.Definition{
-		Kind:  ast.Union,
-		Name:  "_Entity",
-		Types: entityTypes,
-	})
+
+	if len(entityTypes) > 0 {
+		doc.Definitions = append(doc.Definitions, &ast.Definition{
+			Kind:  ast.Union,
+			Name:  "_Entity",
+			Types: entityTypes,
+		})
+	}
 
 	return doc
 }
