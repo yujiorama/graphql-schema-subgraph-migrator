@@ -151,21 +151,6 @@ func (t *SchemaTransformer) transformSchema(doc *ast.SchemaDocument) *ast.Schema
 		&ast.Definition{
 			Kind: ast.Scalar,
 			Name: "_Any",
-		}, &ast.Definition{
-			Kind: ast.Scalar,
-			Name: "federation__FieldSet",
-		}, &ast.Definition{
-			Kind: ast.Scalar,
-			Name: "link__Import",
-		}, &ast.Definition{
-			Kind: ast.Scalar,
-			Name: "federation__ContextFieldValue",
-		}, &ast.Definition{
-			Kind: ast.Scalar,
-			Name: "federation__Scope",
-		}, &ast.Definition{
-			Kind: ast.Scalar,
-			Name: "federation__Policy",
 		},
 	}
 	for _, requiredScalarTypeDefinition := range requiredScalarTypes {
@@ -288,11 +273,27 @@ func (t *SchemaTransformer) transformSchema(doc *ast.SchemaDocument) *ast.Schema
 	}
 
 	if len(resolvableEntityTypes) > 0 {
-		doc.Definitions = append(doc.Definitions, &ast.Definition{
-			Kind:  ast.Union,
-			Name:  "_Entity",
-			Types: resolvableEntityTypes,
-		})
+		unionEntityTypeExists := false
+		for _, typeDefinition := range doc.Definitions {
+			if typeDefinition.Kind == ast.Union && typeDefinition.Name == "_Entity" {
+				unionEntityTypeExists = true
+				break
+			}
+		}
+		if !unionEntityTypeExists {
+			doc.Definitions = append(doc.Definitions, &ast.Definition{
+				Kind:  ast.Union,
+				Name:  "_Entity",
+				Types: resolvableEntityTypes,
+			})
+		} else {
+			for _, typeDefinition := range doc.Definitions {
+				if typeDefinition.Kind == ast.Union && typeDefinition.Name == "_Entity" {
+					typeDefinition.Types = resolvableEntityTypes
+					break
+				}
+			}
+		}
 	}
 
 	return doc
