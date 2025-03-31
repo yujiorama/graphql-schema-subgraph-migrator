@@ -1,0 +1,26 @@
+extend schema @link(url: "https://specs.apollo.dev/federation/v2.9", import: ["@key","@external","@shareable","@provides","@requires"])
+# migrate User to venus
+type User @key(fields: "id") {
+    id: ID
+    # name: String
+    # email: String
+}
+type Post @key(fields: "id", resolvable: true) {
+    id: ID
+    title: String
+    body: String
+    author: User
+    comment: [Comment]!
+}
+type Comment @key(fields: "id", resolvable: true) {
+    id: ID
+    post: Post
+    author: User
+    body: String
+}
+type Query {
+    # migrate User to venus
+    #    getUser(userId: ID): User
+    getPost(postId: ID): Post
+    getComment(commentId: ID): Comment
+}
