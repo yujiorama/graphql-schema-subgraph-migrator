@@ -1,0 +1,23 @@
+{
+  "name": "earth",
+  "version": "1.0.0",
+  "description": "",
+  "type": "module",
+  "scripts": {
+    "compile": "tsc",
+    "start": "npm run compile && node ./dist/index.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "packageManager": "pnpm@10.6.5",
+  "devDependencies": {
+    "@apollo/gateway": "^2.10.0",
+    "@apollo/rover": "^0.28.1",
+    "@apollo/server": "^4.11.3",
+    "@types/node": "^22.13.14",
+    "graphql": "^16.10.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.8.2"
+  }
+}

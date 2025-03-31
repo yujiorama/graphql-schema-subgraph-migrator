@@ -1,0 +1,10 @@
+federation_version: =2.9.3
+subgraphs:
+  mars:
+    routing_url: http://localhost:4001/query
+    schema:
+      file: ../graph/mars.graphqls
+  venus:
+    routing_url: http://localhost:4002/query
+    schema:
+      file: ../graph/venus.graphqls
