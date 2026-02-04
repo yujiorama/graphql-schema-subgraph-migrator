@@ -14,7 +14,7 @@
   "devDependencies": {
     "@apollo/gateway": "^2.10.0",
     "@apollo/rover": "^0.28.1",
-    "@apollo/server": "^4.11.3",
+    "@apollo/server": "^5.4.0",
     "@types/node": "^22.13.14",
     "graphql": "^16.10.0",
     "ts-node": "^10.9.2",
